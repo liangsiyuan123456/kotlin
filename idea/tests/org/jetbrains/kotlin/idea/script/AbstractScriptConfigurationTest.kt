@@ -42,6 +42,7 @@ import org.jetbrains.kotlin.utils.PathUtil
 import org.jetbrains.kotlin.utils.PathUtil.KOTLIN_JAVA_SCRIPT_RUNTIME_JAR
 import org.jetbrains.kotlin.utils.PathUtil.KOTLIN_SCRIPTING_COMMON_JAR
 import org.jetbrains.kotlin.utils.PathUtil.KOTLIN_SCRIPTING_JVM_JAR
+import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 import java.io.File
 import java.util.regex.Pattern
 import kotlin.script.dependencies.Environment
@@ -199,16 +200,14 @@ abstract class AbstractScriptConfigurationTest : KotlinCompletionTestCase() {
             env["template-classes-names"] = listOf("custom.scriptDefinition.Template")
         }
 
-        if (env["javaHome"] != null) {
-            val jdkKind = when ((env["javaHome"] as? List<String>)?.singleOrNull()) {
-                "9" -> TestJdkKind.FULL_JDK_9
-                else -> TestJdkKind.MOCK_JDK
-            }
-            runWriteAction {
-                val jdk = PluginTestCaseBase.jdk(jdkKind)
-                ProjectJdkTable.getInstance().addJdk(jdk, testRootDisposable)
-                env["javaHome"] = File(jdk.homePath)
-            }
+        val jdkKind = when ((env["javaHome"] as? List<String>)?.singleOrNull()) {
+            "9" -> TestJdkKind.FULL_JDK_9
+            else -> TestJdkKind.MOCK_JDK
+        }
+        runWriteAction {
+            val jdk = PluginTestCaseBase.jdk(jdkKind)
+            ProjectJdkTable.getInstance().addJdk(jdk, testRootDisposable)
+            env["javaHome"] = File(jdk.homePath)
         }
 
         env.putAll(defaultEnvironment)

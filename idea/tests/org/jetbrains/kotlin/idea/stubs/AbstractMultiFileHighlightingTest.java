@@ -10,6 +10,8 @@ import kotlin.jvm.functions.Function0;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.kotlin.idea.test.AstAccessControl;
 import org.jetbrains.kotlin.idea.test.PluginTestCaseBase;
+import org.jetbrains.kotlin.test.TestJdkKind;
+import org.jetbrains.kotlin.idea.test.ConfigLibraryUtil;
 
 import java.io.File;
 
@@ -21,6 +23,7 @@ import java.io.File;
 public abstract class AbstractMultiFileHighlightingTest extends AbstractMultiHighlightingTest {
 
     public void doTest(@NotNull String filePath) throws Exception {
+        setUpMockJdk();
         configureByFile(new File(filePath).getName(), "");
         boolean shouldFail = getName().contains("UnspecifiedType");
         AstAccessControl.INSTANCE.testWithControlledAccessToAst(
@@ -38,5 +41,15 @@ public abstract class AbstractMultiFileHighlightingTest extends AbstractMultiHig
     @Override
     protected String getTestDataPath() {
         return PluginTestCaseBase.getTestDataPathBase() + "/multiFileHighlighting/";
+    }
+
+    private void setUpMockJdk() {
+        ConfigLibraryUtil.INSTANCE.configureSdk(
+                getModule(),
+                PluginTestCaseBase.addJdk(
+                        getTestRootDisposable(),
+                        () -> PluginTestCaseBase.jdk(TestJdkKind.MOCK_JDK)
+                )
+        );
     }
 }
