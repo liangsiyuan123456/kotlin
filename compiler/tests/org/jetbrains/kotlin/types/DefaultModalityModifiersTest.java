@@ -110,7 +110,7 @@ public class DefaultModalityModifiersTest extends KotlinTestWithEnvironment {
         }
 
         private ClassDescriptorWithResolutionScopes createClassDescriptor(ClassKind kind, KtClass aClass) {
-            ModuleContext moduleContext = ContextKt.ModuleContext(root, getProject(), "DefaultModalityModifiersTest");
+            ModuleContext moduleContext = ContextKt.ModuleContext(root, getProject(), "DefaultModalityModifiersTest", null);
             Collection<KtFile> files = Collections.singleton(aClass.getContainingKtFile());
 
             StorageComponentContainer container = createContainerForLazyResolve(

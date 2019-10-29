@@ -8,15 +8,13 @@ package org.jetbrains.kotlin.analyzer
 import com.intellij.openapi.util.ModificationTracker
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns
 import org.jetbrains.kotlin.context.ProjectContext
-import org.jetbrains.kotlin.context.withModule
 import org.jetbrains.kotlin.descriptors.ModuleDescriptor
 import org.jetbrains.kotlin.descriptors.PackageFragmentDescriptor
 import org.jetbrains.kotlin.descriptors.PackageFragmentProvider
 import org.jetbrains.kotlin.descriptors.impl.ModuleDescriptorImpl
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
-import org.jetbrains.kotlin.platform.TargetPlatform
-import org.jetbrains.kotlin.psi.KtFile
+import org.jetbrains.kotlin.storage.LockNames
 
 abstract class AbstractResolverForProject<M : ModuleInfo>(
     private val debugName: String,
@@ -210,9 +208,9 @@ private object DiagnoseUnknownModuleInfoReporter {
     fun report(name: String, infos: List<ModuleInfo>): Nothing {
         val message = "$name does not know how to resolve $infos"
         when {
-            name.contains(ResolverForProject.resolverForSdkName) -> errorInSdkResolver(message)
-            name.contains(ResolverForProject.resolverForLibrariesName) -> errorInLibrariesResolver(message)
-            name.contains(ResolverForProject.resolverForModulesName) -> {
+            name.contains(LockNames.SDK.debugName) -> errorInSdkResolver(message)
+            name.contains(LockNames.Libraries.debugName) -> errorInLibrariesResolver(message)
+            name.contains(LockNames.Modules.debugName) -> {
                 when {
                     infos.isEmpty() -> errorInModulesResolverWithEmptyInfos(message)
                     infos.size == 1 -> {
@@ -226,8 +224,8 @@ private object DiagnoseUnknownModuleInfoReporter {
                     else -> throw errorInModulesResolver(message)
                 }
             }
-            name.contains(ResolverForProject.resolverForScriptDependenciesName) -> errorInScriptDependenciesInfoResolver(message)
-            name.contains(ResolverForProject.resolverForSpecialInfoName) -> {
+            name.contains(LockNames.ScriptDependencies.debugName) -> errorInScriptDependenciesInfoResolver(message)
+            name.contains(LockNames.SpecialInfo.debugName) || name.contains(LockNames.NotUnderContentRootModuleInfo.debugName) -> {
                 when {
                     name.contains("ScriptModuleInfo") -> errorInScriptModuleInfoResolver(message)
                     else -> errorInSpecialModuleInfoResolver(message)

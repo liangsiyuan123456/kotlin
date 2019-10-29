@@ -22,6 +22,7 @@ import kotlin.jvm.functions.Function1;
 import kotlin.text.StringsKt;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.TestOnly;
 import org.jetbrains.kotlin.utils.ExceptionUtilsKt;
 import org.jetbrains.kotlin.utils.WrappedValues;
 
@@ -29,8 +30,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 public class LockBasedStorageManager implements StorageManager {
     private static final String PACKAGE_NAME = StringsKt.substringBeforeLast(LockBasedStorageManager.class.getCanonicalName(), ".", "");
@@ -55,7 +54,7 @@ public class LockBasedStorageManager implements StorageManager {
         RuntimeException handleException(@NotNull Throwable throwable);
     }
 
-    public static final StorageManager NO_LOCKS = new LockBasedStorageManager("NO_LOCKS", ExceptionHandlingStrategy.THROW, NoLock.INSTANCE) {
+    public static final StorageManager NO_LOCKS = new LockBasedStorageManager("NO_LOCKS", ExceptionHandlingStrategy.THROW, NoLockBlock.INSTANCE) {
         @NotNull
         @Override
         protected <T> RecursionDetectedResult<T> recursionDetectedDefault() {
@@ -63,38 +62,44 @@ public class LockBasedStorageManager implements StorageManager {
         }
     };
 
+    @TestOnly
     @NotNull
     public static LockBasedStorageManager createWithExceptionHandling(@NotNull String debugText, @NotNull ExceptionHandlingStrategy exceptionHandlingStrategy) {
-        return new LockBasedStorageManager(debugText, exceptionHandlingStrategy, new ReentrantLock());
+        return createWithExceptionHandling(null, debugText, exceptionHandlingStrategy);
     }
 
-    protected final Lock lock;
+    @NotNull
+    public static LockBasedStorageManager createWithExceptionHandling(@Nullable Integer lockOrder, @NotNull String debugText, @NotNull ExceptionHandlingStrategy exceptionHandlingStrategy) {
+        return new LockBasedStorageManager(debugText, exceptionHandlingStrategy, LockHelper.resolveLock(lockOrder, debugText));
+    }
+
+    private final LockBlock lockBlock;
     private final ExceptionHandlingStrategy exceptionHandlingStrategy;
     private final String debugText;
 
     private LockBasedStorageManager(
             @NotNull String debugText,
             @NotNull ExceptionHandlingStrategy exceptionHandlingStrategy,
-            @NotNull Lock lock
+            @NotNull LockBlock lockBlock
     ) {
-        this.lock = lock;
+        this.lockBlock = lockBlock;
         this.exceptionHandlingStrategy = exceptionHandlingStrategy;
         this.debugText = debugText;
     }
 
     public LockBasedStorageManager(String debugText) {
-        this(debugText, ExceptionHandlingStrategy.THROW, new ReentrantLock());
+        this(debugText, ExceptionHandlingStrategy.THROW, LockHelper.resolveLock(debugText));
     }
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + "@" + Integer.toHexString(hashCode()) + " (" + debugText + ")";
+        return getClass().getSimpleName() + "@" + Integer.toHexString(hashCode()) + " (" + debugText + "/" + lockBlock + ")";
     }
 
     public LockBasedStorageManager replaceExceptionHandling(
-            @NotNull String debugText, @NotNull ExceptionHandlingStrategy exceptionHandlingStrategy
+            @NotNull String debugText, @Nullable Integer lockOrder, @NotNull ExceptionHandlingStrategy exceptionHandlingStrategy
     ) {
-        return new LockBasedStorageManager(debugText, exceptionHandlingStrategy, lock);
+        return new LockBasedStorageManager(debugText, exceptionHandlingStrategy, LockHelper.resolveLock(lockOrder, debugText, lockBlock));
     }
 
     @NotNull
@@ -238,17 +243,22 @@ public class LockBasedStorageManager implements StorageManager {
     }
 
     @Override
-    public <T> T compute(@NotNull Function0<? extends T> computable) {
-        lock.lock();
-        try {
-            return computable.invoke();
-        }
-        catch (Throwable throwable) {
-            throw exceptionHandlingStrategy.handleException(throwable);
-        }
-        finally {
-            lock.unlock();
-        }
+    public <T> T compute(@NotNull final Function0<? extends T> computable) {
+        return guarded(new Function0<T>() {
+            @Override
+            public T invoke() {
+                try {
+                    return computable.invoke();
+                }
+                catch (Throwable throwable) {
+                    throw exceptionHandlingStrategy.handleException(throwable);
+                }
+            }
+        });
+    }
+
+    protected final <T> T guarded(@NotNull Function0<? extends T> computable) {
+        return lockBlock.guarded(computable);
     }
 
     @NotNull
@@ -330,54 +340,53 @@ public class LockBasedStorageManager implements StorageManager {
             Object _value = value;
             if (!(_value instanceof NotValue)) return WrappedValues.unescapeThrowable(_value);
 
-            storageManager.lock.lock();
-            try {
-                _value = value;
-                if (!(_value instanceof NotValue)) return WrappedValues.unescapeThrowable(_value);
+            return storageManager.guarded(new Function0<T>() {
+                @Override
+                public T invoke() {
+                    Object _value = value;
+                    if (!(_value instanceof NotValue)) return WrappedValues.unescapeThrowable(_value);
 
-                if (_value == NotValue.COMPUTING) {
-                    value = NotValue.RECURSION_WAS_DETECTED;
-                    RecursionDetectedResult<T> result = recursionDetected(/*firstTime = */ true);
-                    if (!result.isFallThrough()) {
-                        return result.getValue();
-                    }
-                }
-
-                if (_value == NotValue.RECURSION_WAS_DETECTED) {
-                    RecursionDetectedResult<T> result = recursionDetected(/*firstTime = */ false);
-                    if (!result.isFallThrough()) {
-                        return result.getValue();
-                    }
-                }
-
-                value = NotValue.COMPUTING;
-                try {
-                    T typedValue = computable.invoke();
-
-                    // Don't publish computed value till post compute is finished as it may cause a race condition
-                    // if post compute modifies value internals.
-                    postCompute(typedValue);
-
-                    value = typedValue;
-                    return typedValue;
-                }
-                catch (Throwable throwable) {
-                    if (ExceptionUtilsKt.isProcessCanceledException(throwable)) {
-                        value = NotValue.NOT_COMPUTED;
-                        //noinspection ConstantConditions
-                        throw (RuntimeException)throwable;
+                    if (_value == NotValue.COMPUTING) {
+                        value = NotValue.RECURSION_WAS_DETECTED;
+                        RecursionDetectedResult<T> result = recursionDetected(/*firstTime = */ true);
+                        if (!result.isFallThrough()) {
+                            return result.getValue();
+                        }
                     }
 
-                    if (value == NotValue.COMPUTING) {
-                        // Store only if it's a genuine result, not something thrown through recursionDetected()
-                        value = WrappedValues.escapeThrowable(throwable);
+                    if (_value == NotValue.RECURSION_WAS_DETECTED) {
+                        RecursionDetectedResult<T> result = recursionDetected(/*firstTime = */ false);
+                        if (!result.isFallThrough()) {
+                            return result.getValue();
+                        }
                     }
-                    throw storageManager.exceptionHandlingStrategy.handleException(throwable);
+
+                    value = NotValue.COMPUTING;
+                    try {
+                        T typedValue = computable.invoke();
+
+                        // Don't publish computed value till post compute is finished as it may cause a race condition
+                        // if post compute modifies value internals.
+                        postCompute(typedValue);
+
+                        value = typedValue;
+                        return typedValue;
+                    }
+                    catch (Throwable throwable) {
+                        if (ExceptionUtilsKt.isProcessCanceledException(throwable)) {
+                            value = NotValue.NOT_COMPUTED;
+                            //noinspection ConstantConditions
+                            throw (RuntimeException)throwable;
+                        }
+
+                        if (value == NotValue.COMPUTING) {
+                            // Store only if it's a genuine result, not something thrown through recursionDetected()
+                            value = WrappedValues.escapeThrowable(throwable);
+                        }
+                        throw storageManager.exceptionHandlingStrategy.handleException(throwable);
+                    }
                 }
-            }
-            finally {
-                storageManager.lock.unlock();
-            }
+            });
         }
 
         /**
@@ -494,56 +503,55 @@ public class LockBasedStorageManager implements StorageManager {
 
         @Override
         @Nullable
-        public V invoke(K input) {
+        public V invoke(final K input) {
             Object value = cache.get(input);
             if (value != null && value != NotValue.COMPUTING) return WrappedValues.unescapeExceptionOrNull(value);
 
-            storageManager.lock.lock();
-            try {
-                value = cache.get(input);
-                if (value == NotValue.COMPUTING) {
-                    throw recursionDetected(input);
-                }
-                if (value != null) return WrappedValues.unescapeExceptionOrNull(value);
-
-                AssertionError error = null;
-                try {
-                    cache.put(input, NotValue.COMPUTING);
-                    V typedValue = compute.invoke(input);
-                    Object oldValue = cache.put(input, WrappedValues.escapeNull(typedValue));
-
-                    // This code effectively asserts that oldValue is null
-                    // The trickery is here because below we catch all exceptions thrown here, and this is the only exception that shouldn't be stored
-                    // A seemingly obvious way to come about this case would be to declare a special exception class, but the problem is that
-                    // one memoized function is likely to (indirectly) call another, and if this second one throws this exception, we are screwed
-                    if (oldValue != NotValue.COMPUTING) {
-                        error = raceCondition(input, oldValue);
-                        throw error;
+            return storageManager.guarded(new Function0<V>() {
+                @Override
+                public V invoke() {
+                    Object value = cache.get(input);
+                    if (value == NotValue.COMPUTING) {
+                        throw recursionDetected(input);
                     }
+                    if (value != null) return WrappedValues.unescapeExceptionOrNull(value);
 
-                    return typedValue;
-                }
-                catch (Throwable throwable) {
-                    if (ExceptionUtilsKt.isProcessCanceledException(throwable)) {
-                        cache.remove(input);
-                        //noinspection ConstantConditions
-                        throw (RuntimeException)throwable;
+                    AssertionError error = null;
+                    try {
+                        cache.put(input, NotValue.COMPUTING);
+                        V typedValue = compute.invoke(input);
+                        Object oldValue = cache.put(input, WrappedValues.escapeNull(typedValue));
+
+                        // This code effectively asserts that oldValue is null
+                        // The trickery is here because below we catch all exceptions thrown here, and this is the only exception that shouldn't be stored
+                        // A seemingly obvious way to come about this case would be to declare a special exception class, but the problem is that
+                        // one memoized function is likely to (indirectly) call another, and if this second one throws this exception, we are screwed
+                        if (oldValue != NotValue.COMPUTING) {
+                            error = raceCondition(input, oldValue);
+                            throw error;
+                        }
+
+                        return typedValue;
                     }
-                    if (throwable == error) {
+                    catch (Throwable throwable) {
+                        if (ExceptionUtilsKt.isProcessCanceledException(throwable)) {
+                            cache.remove(input);
+                            //noinspection ConstantConditions
+                            throw (RuntimeException)throwable;
+                        }
+                        if (throwable == error) {
+                            throw storageManager.exceptionHandlingStrategy.handleException(throwable);
+                        }
+
+                        Object oldValue = cache.put(input, WrappedValues.escapeThrowable(throwable));
+                        if (oldValue != NotValue.COMPUTING) {
+                            throw raceCondition(input, oldValue);
+                        }
+
                         throw storageManager.exceptionHandlingStrategy.handleException(throwable);
                     }
-
-                    Object oldValue = cache.put(input, WrappedValues.escapeThrowable(throwable));
-                    if (oldValue != NotValue.COMPUTING) {
-                        throw raceCondition(input, oldValue);
-                    }
-
-                    throw storageManager.exceptionHandlingStrategy.handleException(throwable);
                 }
-            }
-            finally {
-                storageManager.lock.unlock();
-            }
+            });
         }
 
         @NotNull

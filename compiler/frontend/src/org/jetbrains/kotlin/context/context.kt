@@ -25,6 +25,7 @@ import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.platform.TargetPlatform
 import org.jetbrains.kotlin.storage.ExceptionTracker
 import org.jetbrains.kotlin.storage.LockBasedStorageManager
+import org.jetbrains.kotlin.storage.LockNames
 import org.jetbrains.kotlin.storage.StorageManager
 
 interface GlobalContext {
@@ -83,14 +84,18 @@ class MutableModuleContextImpl(
     projectContext: ProjectContext
 ) : MutableModuleContext, ProjectContext by projectContext
 
-fun GlobalContext(debugName: String): GlobalContextImpl {
+fun GlobalContext(resolverName: LockNames) = GlobalContext(resolverName.debugName, resolverName.lockOrder)
+
+fun GlobalContext(debugName: String, lockOrder: Int? = null): GlobalContextImpl {
     val tracker = ExceptionTracker()
-    return GlobalContextImpl(LockBasedStorageManager.createWithExceptionHandling(debugName, tracker), tracker)
+    return GlobalContextImpl(LockBasedStorageManager.createWithExceptionHandling(lockOrder, debugName, tracker), tracker)
 }
 
-fun ProjectContext(project: Project, debugName: String): ProjectContext = ProjectContextImpl(project, GlobalContext(debugName))
-fun ModuleContext(module: ModuleDescriptor, project: Project, debugName: String): ModuleContext =
-    ModuleContextImpl(module, ProjectContext(project, debugName))
+fun ProjectContext(project: Project, debugName: String, lockOrder: Int? = null): ProjectContext =
+    ProjectContextImpl(project, GlobalContext(debugName, lockOrder))
+
+fun ModuleContext(module: ModuleDescriptor, project: Project, debugName: String, lockOrder: Int? = null): ModuleContext =
+    ModuleContextImpl(module, ProjectContext(project, debugName, lockOrder))
 
 fun GlobalContext.withProject(project: Project): ProjectContext = ProjectContextImpl(project, this)
 fun ProjectContext.withModule(module: ModuleDescriptor): ModuleContext = ModuleContextImpl(module, this)
