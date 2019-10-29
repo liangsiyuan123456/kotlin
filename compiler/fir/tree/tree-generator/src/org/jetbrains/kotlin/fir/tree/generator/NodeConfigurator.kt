@@ -71,7 +71,7 @@ object NodeConfigurator : AbstractFieldConfigurator() {
         callableDeclaration.configure {
             withArg("F", "FirCallableDeclaration<F>")
             parentArg(symbolOwner, "E", "F")
-            +field("receiverTypeRef", typeRef, nullable = true)
+            +field("receiverTypeRef", typeRef, nullable = true).withTransform()
             +symbol("FirCallableSymbol", "F")
         }
 
@@ -180,7 +180,7 @@ object NodeConfigurator : AbstractFieldConfigurator() {
         }
 
         functionCall.configure {
-            +typeArguments
+            +typeArguments.withTransform()
             +field("calleeReference", namedReference)
         }
 

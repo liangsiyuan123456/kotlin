@@ -153,6 +153,7 @@ class FirControlFlowStatementsResolveTransformer(transformer: FirBodyResolveTran
 
     override fun transformCatch(catch: FirCatch, data: Any?): CompositeTransformResult<FirCatch> {
         dataFlowAnalyzer.enterCatchClause(catch)
+        catch.parameter.transformReturnTypeRef(transformer, null)
         return withScopeCleanup(localScopes) {
             localScopes += FirLocalScope()
             catch.transformParameter(transformer, noExpectedType)

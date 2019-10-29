@@ -102,5 +102,9 @@ class FirJavaConstructor(
         return this
     }
 
+    override fun <D> transformReceiverTypeRef(transformer: FirTransformer<D>, data: D): FirJavaConstructor {
+        return this
+    }
+
     override var containerSource: DeserializedContainerSource? = null
 }

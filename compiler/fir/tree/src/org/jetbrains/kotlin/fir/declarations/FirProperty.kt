@@ -52,6 +52,8 @@ abstract class FirProperty : FirPureAbstractElement(), FirVariable<FirProperty>,
 
     abstract override fun <D> transformReturnTypeRef(transformer: FirTransformer<D>, data: D): FirProperty
 
+    abstract override fun <D> transformReceiverTypeRef(transformer: FirTransformer<D>, data: D): FirProperty
+
     abstract override fun <D> transformGetter(transformer: FirTransformer<D>, data: D): FirProperty
 
     abstract override fun <D> transformSetter(transformer: FirTransformer<D>, data: D): FirProperty

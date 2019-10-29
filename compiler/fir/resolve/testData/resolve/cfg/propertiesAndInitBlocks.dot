@@ -173,7 +173,7 @@ digraph propertiesAndInitBlocks_kt {
     }
 
     local final class LocalClass : R|kotlin/Any| {
-        public constructor(): R|LocalClass| {
+        local constructor(): R|LocalClass| {
             super<R|kotlin/Any|>()
         }
 

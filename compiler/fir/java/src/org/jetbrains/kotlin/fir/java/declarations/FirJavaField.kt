@@ -72,6 +72,10 @@ class FirJavaField(
         return this
     }
 
+    override fun <D> transformReceiverTypeRef(transformer: FirTransformer<D>, data: D): FirField {
+        return this
+    }
+
     override fun replaceResolvePhase(newResolvePhase: FirResolvePhase) {
         resolvePhase = newResolvePhase
     }

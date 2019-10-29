@@ -51,6 +51,8 @@ abstract class FirModifiableConstructor : FirPureAbstractElement(), FirConstruct
 
     abstract override fun <D> transformReturnTypeRef(transformer: FirTransformer<D>, data: D): FirModifiableConstructor
 
+    abstract override fun <D> transformReceiverTypeRef(transformer: FirTransformer<D>, data: D): FirModifiableConstructor
+
     abstract override fun <D> transformControlFlowGraphReference(transformer: FirTransformer<D>, data: D): FirModifiableConstructor
 
     abstract override fun <D> transformValueParameters(transformer: FirTransformer<D>, data: D): FirModifiableConstructor

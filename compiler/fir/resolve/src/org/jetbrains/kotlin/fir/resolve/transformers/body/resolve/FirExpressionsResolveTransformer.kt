@@ -138,6 +138,7 @@ class FirExpressionsResolveTransformer(transformer: FirBodyResolveTransformer) :
         dataFlowAnalyzer.enterFunctionCall(functionCall)
         if (functionCall.calleeReference !is FirSimpleNamedReference) return functionCall.compose()
         functionCall.transform<FirFunctionCall, Nothing?>(InvocationKindTransformer, null)
+        functionCall.transformTypeArguments(transformer, null)
         val expectedTypeRef = data as FirTypeRef?
         val completeInference =
             try {

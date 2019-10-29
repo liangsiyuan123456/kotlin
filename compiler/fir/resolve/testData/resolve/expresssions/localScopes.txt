@@ -10,11 +10,11 @@ FILE: localScopes.kt
     }
     public final fun test(): R|kotlin/Unit| {
         local open class BaseLocal : R|Bar| {
-            public constructor(): R|BaseLocal| {
+            local constructor(): R|BaseLocal| {
                 super<R|Bar|>()
             }
 
-            public final fun baz(): R|kotlin/Unit| {
+            local final fun baz(): R|kotlin/Unit| {
             }
 
         }
@@ -27,25 +27,25 @@ FILE: localScopes.kt
                 super<R|Bar|>()
             }
 
-            public final fun baz(): R|kotlin/Unit| {
+            local final fun baz(): R|kotlin/Unit| {
             }
 
         }
 
         R|<local>/anonymous|.R|/baz|()
         R|<local>/anonymous|.R|/Bar.foo|()
-        local final class DerivedLocal : R|class error: Symbol not found, for `BaseLocal`| {
-            public constructor(): R|DerivedLocal| {
-                super<R|class error: Symbol not found, for `BaseLocal`|>()
+        local final class DerivedLocal : R|BaseLocal| {
+            local constructor(): R|DerivedLocal| {
+                super<R|BaseLocal|>()
             }
 
-            public final fun gau(): R|kotlin/Unit| {
+            local final fun gau(): R|kotlin/Unit| {
             }
 
         }
 
         lval derived: R|DerivedLocal| = R|/DerivedLocal.DerivedLocal|()
         R|<local>/derived|.R|/DerivedLocal.gau|()
-        R|<local>/derived|.<Unresolved name: baz>#()
-        R|<local>/derived|.<Unresolved name: foo>#()
+        R|<local>/derived|.R|/BaseLocal.baz|()
+        R|<local>/derived|.R|/Bar.foo|()
     }

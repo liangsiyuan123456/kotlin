@@ -65,7 +65,7 @@ open class FirConstructorImpl(
 
     override fun <D> transformChildren(transformer: FirTransformer<D>, data: D): FirConstructorImpl {
         transformReturnTypeRef(transformer, data)
-        receiverTypeRef = receiverTypeRef?.transformSingle(transformer, data)
+        transformReceiverTypeRef(transformer, data)
         transformControlFlowGraphReference(transformer, data)
         transformValueParameters(transformer, data)
         body = body?.transformSingle(transformer, data)
@@ -77,6 +77,11 @@ open class FirConstructorImpl(
 
     override fun <D> transformReturnTypeRef(transformer: FirTransformer<D>, data: D): FirConstructorImpl {
         returnTypeRef = returnTypeRef.transformSingle(transformer, data)
+        return this
+    }
+
+    override fun <D> transformReceiverTypeRef(transformer: FirTransformer<D>, data: D): FirConstructorImpl {
+        receiverTypeRef = receiverTypeRef?.transformSingle(transformer, data)
         return this
     }
 

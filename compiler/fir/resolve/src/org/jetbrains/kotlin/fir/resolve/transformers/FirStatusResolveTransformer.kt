@@ -22,44 +22,7 @@ class FirStatusResolveTransformer : FirAbstractTreeTransformer(phase = FirResolv
 
     private val classes = mutableListOf<FirRegularClass>()
 
-    private fun FirDeclaration.resolveVisibility(): Visibility {
-        if (this is FirConstructor) {
-            val klass = classes.lastOrNull()
-            if (klass != null && (klass.classKind == ClassKind.ENUM_CLASS || klass.modality == Modality.SEALED)) {
-                return Visibilities.PRIVATE
-            }
-        }
-        return Visibilities.PUBLIC // TODO (overrides)
-    }
-
-    private fun FirDeclaration.resolveModality(): Modality {
-        return when (this) {
-            is FirEnumEntry -> Modality.FINAL
-            is FirRegularClass -> if (classKind == ClassKind.INTERFACE) Modality.ABSTRACT else Modality.FINAL
-            is FirCallableMemberDeclaration<*> -> {
-                val containingClass = classes.lastOrNull()
-                when {
-                    containingClass == null -> Modality.FINAL
-                    containingClass.classKind == ClassKind.INTERFACE -> {
-                        when {
-                            visibility == Visibilities.PRIVATE ->
-                                Modality.FINAL
-                            this is FirSimpleFunction && body == null ->
-                                Modality.ABSTRACT
-                            this is FirProperty && initializer == null && getter?.body == null && setter?.body == null ->
-                                Modality.ABSTRACT
-                            else ->
-                                Modality.OPEN
-                        }
-                    }
-                    else -> {
-                        if (isOverride && containingClass.modality != Modality.FINAL) Modality.OPEN else Modality.FINAL
-                    }
-                }
-            }
-            else -> Modality.FINAL
-        }
-    }
+    private val containingClass: FirRegularClass? get() = classes.lastOrNull()
 
     override lateinit var session: FirSession
 
@@ -75,10 +38,10 @@ class FirStatusResolveTransformer : FirAbstractTreeTransformer(phase = FirResolv
         if (declarationStatus.visibility == Visibilities.UNKNOWN || declarationStatus.modality == null) {
             val declaration = declarationsWithStatuses.last()
             val visibility = when (declarationStatus.visibility) {
-                Visibilities.UNKNOWN -> declaration.resolveVisibility()
+                Visibilities.UNKNOWN -> declaration.resolveVisibility(containingClass)
                 else -> declarationStatus.visibility
             }
-            val modality = declarationStatus.modality ?: declaration.resolveModality()
+            val modality = declarationStatus.modality ?: declaration.resolveModality(containingClass)
             val resolvedStatus = (declarationStatus as FirDeclarationStatusImpl).resolved(visibility, modality)
             return resolvedStatus.compose()
         }
@@ -107,11 +70,13 @@ class FirStatusResolveTransformer : FirAbstractTreeTransformer(phase = FirResolv
     }
 
     override fun transformTypeAlias(typeAlias: FirTypeAlias, data: Nothing?): CompositeTransformResult<FirDeclaration> {
+        typeAlias.typeParameters.forEach { transformDeclaration(it, data) }
         return transformMemberDeclaration(typeAlias, data)
     }
 
     override fun transformRegularClass(regularClass: FirRegularClass, data: Nothing?): CompositeTransformResult<FirStatement> {
         return storeClass(regularClass) {
+            regularClass.typeParameters.forEach { transformDeclaration(it, data) }
             transformMemberDeclaration(regularClass, data)
         } as CompositeTransformResult<FirStatement>
     }
@@ -164,5 +129,46 @@ class FirStatusResolveTransformer : FirAbstractTreeTransformer(phase = FirResolv
 
     override fun transformBlock(block: FirBlock, data: Nothing?): CompositeTransformResult<FirStatement> {
         return block.compose()
+    }
+
+    companion object {
+        fun FirDeclaration.resolveVisibility(containingClass: FirRegularClass?): Visibility {
+            if (this is FirConstructor) {
+                if (containingClass != null &&
+                    (containingClass.classKind == ClassKind.ENUM_CLASS || containingClass.modality == Modality.SEALED)
+                ) {
+                    return Visibilities.PRIVATE
+                }
+            }
+            return Visibilities.PUBLIC // TODO (overrides)
+        }
+
+        fun FirDeclaration.resolveModality(containingClass: FirRegularClass?): Modality {
+            return when (this) {
+                is FirEnumEntry -> Modality.FINAL
+                is FirRegularClass -> if (classKind == ClassKind.INTERFACE) Modality.ABSTRACT else Modality.FINAL
+                is FirCallableMemberDeclaration<*> -> {
+                    when {
+                        containingClass == null -> Modality.FINAL
+                        containingClass.classKind == ClassKind.INTERFACE -> {
+                            when {
+                                visibility == Visibilities.PRIVATE ->
+                                    Modality.FINAL
+                                this is FirSimpleFunction && body == null ->
+                                    Modality.ABSTRACT
+                                this is FirProperty && initializer == null && getter?.body == null && setter?.body == null ->
+                                    Modality.ABSTRACT
+                                else ->
+                                    Modality.OPEN
+                            }
+                        }
+                        else -> {
+                            if (isOverride && containingClass.modality != Modality.FINAL) Modality.OPEN else Modality.FINAL
+                        }
+                    }
+                }
+                else -> Modality.FINAL
+            }
+        }
     }
 }

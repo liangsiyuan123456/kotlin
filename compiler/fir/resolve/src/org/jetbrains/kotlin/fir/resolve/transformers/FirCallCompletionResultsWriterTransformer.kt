@@ -11,6 +11,7 @@ import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.expressions.*
 import org.jetbrains.kotlin.fir.references.impl.FirResolvedCallableReferenceImpl
 import org.jetbrains.kotlin.fir.references.impl.FirResolvedNamedReferenceImpl
+import org.jetbrains.kotlin.fir.render
 import org.jetbrains.kotlin.fir.resolve.calls.Candidate
 import org.jetbrains.kotlin.fir.resolve.calls.FirNamedReferenceWithCandidate
 import org.jetbrains.kotlin.fir.resolve.calls.candidate
@@ -22,6 +23,7 @@ import org.jetbrains.kotlin.fir.resolve.withNullability
 import org.jetbrains.kotlin.fir.scopes.impl.withReplacedConeType
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.types.impl.ConeTypeParameterTypeImpl
+import org.jetbrains.kotlin.fir.types.impl.FirErrorTypeRefImpl
 import org.jetbrains.kotlin.fir.types.impl.FirResolvedTypeRefImpl
 import org.jetbrains.kotlin.fir.types.impl.FirTypeProjectionWithVarianceImpl
 import org.jetbrains.kotlin.fir.visitors.CompositeTransformResult
@@ -42,7 +44,10 @@ class FirCallCompletionResultsWriterTransformer(
             qualifiedAccessExpression.calleeReference as? FirNamedReferenceWithCandidate ?: return qualifiedAccessExpression.compose()
         calleeReference.candidate.substitutor
 
-        val typeRef = typeCalculator.tryCalculateReturnType(calleeReference.candidateSymbol.phasedFir as FirTypedDeclaration)
+        val candidateFir = calleeReference.candidateSymbol.phasedFir
+        val typeRef = (candidateFir as? FirTypedDeclaration)?.let {
+            typeCalculator.tryCalculateReturnType(it)
+        } ?: FirErrorTypeRefImpl(calleeReference.source, "Callee reference to candidate without return type: ${candidateFir.render()}")
 
         val initialType = calleeReference.candidate.substitutor.substituteOrNull(typeRef.type)
         val finalType = finalSubstitutor.substituteOrNull(initialType)
