@@ -263,12 +263,12 @@ private val jvmFilePhases =
 
         enumClassPhase then
         objectClassPhase then
+        jvmStaticAnnotationPhase then
+        staticDefaultFunctionPhase then
         initializersPhase then
         collectionStubMethodLowering then
         functionNVarargBridgePhase then
         bridgePhase then
-        jvmStaticAnnotationPhase then
-        staticDefaultFunctionPhase then
         syntheticAccessorPhase then
 
         toArrayPhase then
