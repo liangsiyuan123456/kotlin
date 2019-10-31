@@ -5,6 +5,13 @@
 
 package kotlinx.metadata.klib
 
-class File(
+import org.jetbrains.kotlin.library.metadata.KlibMetadataProtoBuf
+
+class KmFile(
     val name: String
 )
+
+fun KmFile.writeFile(): KlibMetadataProtoBuf.File.Builder =
+    KlibMetadataProtoBuf.File.newBuilder().also { km ->
+        km.name = name
+    }

@@ -7,6 +7,7 @@ package kotlinx.metadata.klib
 
 import kotlinx.metadata.Flags
 import kotlinx.metadata.KmAnnotation
+import kotlinx.metadata.impl.WriteContext
 import kotlinx.metadata.impl.writeAnnotation
 import org.jetbrains.kotlin.library.metadata.KlibMetadataProtoBuf
 
@@ -16,11 +17,42 @@ class KmHeader(
     val annotations: List<KmAnnotation>,
     val packageFragmentNames: List<String>,
     val emptyPackages: List<String>,
-    val files: List<File>
+    val files: List<KmFile>
 )
 
 abstract class KmHeaderVisitor {
-    abstract fun visitModuleName()
+
+    abstract fun visitAnnotation(annotation: KmAnnotation)
+
+    abstract fun visitFile(file: KmFile)
+
+    abstract fun visitEnd()
 }
 
-class KmHeaderWriter
+fun writeHeader(
+    c: WriteContext,
+    moduleName: String,
+    flags: Flags,
+    packageFragmentNames: List<String>,
+    emptyPackages: List<String>,
+    output: (KlibMetadataProtoBuf.Header.Builder) -> Unit
+): KmHeaderVisitor =
+    object : KmHeaderVisitor() {
+        private val t = KlibMetadataProtoBuf.Header.newBuilder()
+
+        override fun visitAnnotation(annotation: KmAnnotation) {
+            t.addAnnotation(annotation.writeAnnotation(c.strings))
+        }
+
+        override fun visitFile(file: KmFile) {
+            t.addFile(file.writeFile())
+        }
+
+        override fun visitEnd() {
+            t.moduleName = moduleName
+            t.flags = flags
+            t.addAllPackageFragmentName(packageFragmentNames)
+            t.addAllEmptyPackage(emptyPackages)
+            output(t)
+        }
+    }
