@@ -496,8 +496,18 @@ class AnonymousObjectTransformer(
         //TODO: some of such parameters could be skipped - we should perform additional analysis
         val capturedLambdasToInline = HashMap<String, LambdaInfo>() //captured var of inlined parameter
         val allRecapturedParameters = ArrayList<CapturedParamDesc>()
-        val addCapturedNotAddOuter =
-            parentFieldRemapper.isRoot || parentFieldRemapper is InlinedLambdaRemapper && parentFieldRemapper.parent!!.isRoot
+        val addCapturedNotAddOuter = if (parentFieldRemapper is InlinedLambdaRemapper) {
+            // Regenerating object in a lambda -- add outer reference if there is an outer object.
+            // NOTE: KT-28064 specifies that objects in lambdas are not regenerated at all; in that case,
+            //       this code would never be reached in the first place. For a flag that controls this,
+            //       see `InliningContext.subInlineLambda`.
+            parentFieldRemapper.parent!!.isRoot
+        } else {
+            // Regenerating object defined in the named inline function -- use outer reference if the original
+            // had it, i.e. if this is an object defined inside another object at source code level, or an object
+            // defined inside a lambda that is then inlined into another object with KT-28064 style handling disabled.
+            constructorParamBuilder.listCaptured().all { it.newFieldName != AsmUtil.CAPTURED_THIS_FIELD }
+        }
         val alreadyAdded = HashMap<String, CapturedParamInfo>()
         for (info in capturedLambdas) {
             if (addCapturedNotAddOuter) {
