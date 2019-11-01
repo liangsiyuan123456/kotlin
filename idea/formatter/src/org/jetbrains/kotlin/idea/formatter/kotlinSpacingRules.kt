@@ -469,6 +469,15 @@ fun createSpacingBuilder(settings: CodeStyleSettings, builderUtil: KotlinSpacing
                 }
             }
 
+            inPosition(parent = FUNCTION_LITERAL, right = BLOCK).customRule { _, _, right ->
+                val elementType = right.requireNode().firstChildNode.elementType
+                if (elementType == EOL_COMMENT || elementType == BLOCK_COMMENT) {
+                    createSpacing(1)
+                } else {
+                    null
+                }
+            }
+
             inPosition(parent = IF, right = THEN).customRule(leftBraceRuleIfBlockIsWrapped)
             inPosition(parent = IF, right = ELSE).customRule(leftBraceRuleIfBlockIsWrapped)
 
