@@ -34,7 +34,7 @@ class FirCallCompletionResultsWriterTransformer(
     override val session: FirSession,
     private val finalSubstitutor: ConeSubstitutor,
     private val typeCalculator: ReturnTypeCalculator
-) : FirAbstractTreeTransformer(phase = FirResolvePhase.IMPLICIT_TYPES_BODY_RESOLVE) {
+) : FirAbstractTreeTransformer<Nothing?>(phase = FirResolvePhase.IMPLICIT_TYPES_BODY_RESOLVE) {
 
     override fun transformQualifiedAccessExpression(
         qualifiedAccessExpression: FirQualifiedAccessExpression,

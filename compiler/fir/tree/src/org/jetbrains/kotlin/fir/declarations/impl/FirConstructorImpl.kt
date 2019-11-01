@@ -69,7 +69,7 @@ open class FirConstructorImpl(
         transformControlFlowGraphReference(transformer, data)
         transformValueParameters(transformer, data)
         body = body?.transformSingle(transformer, data)
-        status = status.transformSingle(transformer, data)
+        transformStatus(transformer, data)
         annotations.transformInplace(transformer, data)
         delegatedConstructor = delegatedConstructor?.transformSingle(transformer, data)
         return this
@@ -92,6 +92,11 @@ open class FirConstructorImpl(
 
     override fun <D> transformValueParameters(transformer: FirTransformer<D>, data: D): FirConstructorImpl {
         valueParameters.transformInplace(transformer, data)
+        return this
+    }
+
+    override fun <D> transformStatus(transformer: FirTransformer<D>, data: D): FirConstructorImpl {
+        status = status.transformSingle(transformer, data)
         return this
     }
 

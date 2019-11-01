@@ -7,17 +7,17 @@ FILE: localInnerClass.kt
                 super<R|kotlin/Any|>()
             }
 
-            local final fun foo(): R|Foo| {
+            public final fun foo(): R|Foo| {
                 ^foo R|/Derived.Derived|(Int(42))
             }
 
             local final inner class Derived : R|Foo| {
-                local constructor(x: R|kotlin/Int|): R|Derived| {
+                public constructor(x: R|kotlin/Int|): R|Derived| {
                     super<R|kotlin/Any|>()
                 }
 
-                local final val x: R|kotlin/Int| = R|<local>/x|
-                    local get(): R|kotlin/Int|
+                public final val x: R|kotlin/Int| = R|<local>/x|
+                    public get(): R|kotlin/Int|
 
             }
 

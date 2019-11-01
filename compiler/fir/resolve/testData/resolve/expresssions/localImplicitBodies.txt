@@ -5,11 +5,11 @@ FILE: localImplicitBodies.kt
                 super<R|kotlin/Any|>()
             }
 
-            local final fun sss(): <ERROR TYPE REF: Cannot calculate return type (local class/object?)> {
+            public final fun sss(): <ERROR TYPE REF: Cannot calculate return type (local class/object?)> {
                 ^sss R?C|/abc|()
             }
 
-            local final fun abc(): R|kotlin/Int| {
+            public final fun abc(): R|kotlin/Int| {
                 ^abc Int(1)
             }
 

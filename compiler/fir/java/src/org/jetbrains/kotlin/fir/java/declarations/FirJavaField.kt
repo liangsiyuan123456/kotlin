@@ -92,6 +92,11 @@ class FirJavaField(
         return this
     }
 
+    override fun <D> transformStatus(transformer: FirTransformer<D>, data: D): FirJavaField {
+        status = status.transformSingle(transformer, data)
+        return this
+    }
+
     override val delegate: FirExpression?
         get() = null
 

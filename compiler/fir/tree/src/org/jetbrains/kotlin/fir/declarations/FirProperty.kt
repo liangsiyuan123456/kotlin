@@ -60,5 +60,7 @@ abstract class FirProperty : FirPureAbstractElement(), FirVariable<FirProperty>,
 
     abstract override fun <D> transformControlFlowGraphReference(transformer: FirTransformer<D>, data: D): FirProperty
 
+    abstract override fun <D> transformStatus(transformer: FirTransformer<D>, data: D): FirProperty
+
     abstract override fun <D> transformOtherChildren(transformer: FirTransformer<D>, data: D): FirProperty
 }

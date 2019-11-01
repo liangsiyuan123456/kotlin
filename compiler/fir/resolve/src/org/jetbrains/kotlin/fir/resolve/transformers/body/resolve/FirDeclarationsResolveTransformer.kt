@@ -5,11 +5,9 @@
 
 package org.jetbrains.kotlin.fir.resolve.transformers.body.resolve
 
-import org.jetbrains.kotlin.descriptors.Visibilities
 import org.jetbrains.kotlin.fir.FirElement
 import org.jetbrains.kotlin.fir.copy
 import org.jetbrains.kotlin.fir.declarations.*
-import org.jetbrains.kotlin.fir.declarations.impl.FirDeclarationStatusImpl
 import org.jetbrains.kotlin.fir.declarations.impl.FirDefaultPropertyAccessor
 import org.jetbrains.kotlin.fir.declarations.impl.FirValueParameterImpl
 import org.jetbrains.kotlin.fir.expressions.FirStatement
@@ -19,7 +17,7 @@ import org.jetbrains.kotlin.fir.resolve.calls.extractLambdaInfoFromFunctionalTyp
 import org.jetbrains.kotlin.fir.resolve.constructFunctionalTypeRef
 import org.jetbrains.kotlin.fir.resolve.defaultType
 import org.jetbrains.kotlin.fir.resolve.transformers.ControlFlowGraphReferenceTransformer
-import org.jetbrains.kotlin.fir.resolve.transformers.FirStatusResolveTransformer.Companion.resolveModality
+import org.jetbrains.kotlin.fir.resolve.transformers.FirStatusResolveTransformer.Companion.resolveStatus
 import org.jetbrains.kotlin.fir.resolve.transformers.StoreType
 import org.jetbrains.kotlin.fir.resolve.transformers.transformVarargTypeToArrayType
 import org.jetbrains.kotlin.fir.resolvedTypeFromPrototype
@@ -53,18 +51,7 @@ class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransformer) 
         declarationStatus: FirDeclarationStatus,
         data: Any?
     ): CompositeTransformResult<FirDeclarationStatus> {
-        if (declarationStatus.visibility == Visibilities.UNKNOWN || declarationStatus.modality == null) {
-            val declaration = components.container
-            val visibility = when (declarationStatus.visibility) {
-                Visibilities.UNKNOWN -> Visibilities.LOCAL
-                else -> declarationStatus.visibility
-            }
-            val modality = declarationStatus.modality ?: declaration.resolveModality(containingClass)
-            val resolvedStatus = (declarationStatus as FirDeclarationStatusImpl).resolved(visibility, modality)
-            return resolvedStatus.compose()
-        }
-
-        return declarationStatus.compose()
+        return (data as? FirDeclarationStatus ?: declarationStatus).compose()
     }
 
     private fun prepareTypeParameterOwnerForBodyResolve(declaration: FirMemberDeclaration) {
@@ -94,6 +81,9 @@ class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransformer) 
             prepareTypeParameterOwnerForBodyResolve(property)
             if (property.isLocal) {
                 prepareSignatureForBodyResolve(property)
+                property.transformStatus(this, property.resolveStatus(property.status))
+                property.getter?.let { it.transformStatus(this, it.resolveStatus(it.status)) }
+                property.setter?.let { it.transformStatus(this, it.resolveStatus(it.status)) }
                 return@withScopeCleanup transformLocalVariable(property)
             }
             val returnTypeRef = property.returnTypeRef
@@ -186,6 +176,13 @@ class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransformer) 
         } as CompositeTransformResult<FirStatement>
     }
 
+    private fun FirDeclaration.resolveStatus(status: FirDeclarationStatus, containingClass: FirClass<*>? = null): FirDeclarationStatus {
+        val containingDeclaration = components.containerIfAny
+        return resolveStatus(
+            status, containingClass as? FirRegularClass, isLocal = containingDeclaration != null && containingClass == null
+        )
+    }
+
     private fun prepareLocalClassForBodyResolve(klass: FirClass<*>) {
         if (klass.supertypesComputationStatus == SupertypesComputationStatus.NOT_COMPUTED) {
             klass.replaceSuperTypeRefs(
@@ -194,6 +191,9 @@ class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransformer) 
                 }
             )
             klass.replaceSupertypesComputationStatus(SupertypesComputationStatus.COMPUTED)
+        }
+        if (klass is FirRegularClass) {
+            klass.transformStatus(transformer, klass.resolveStatus(klass.status))
         }
         // This is necessary because of possible jumps from implicit bodies inside
         for (declaration in klass.declarations) {
@@ -205,6 +205,11 @@ class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransformer) 
                     withScopeCleanup(topLevelScopes) {
                         prepareTypeParameterOwnerForBodyResolve(declaration)
                         prepareSignatureForBodyResolve(declaration)
+                        declaration.transformStatus(transformer, declaration.resolveStatus(declaration.status, klass))
+                        if (declaration is FirProperty) {
+                            declaration.getter?.let { it.transformStatus(this, it.resolveStatus(it.status, klass)) }
+                            declaration.setter?.let { it.transformStatus(this, it.resolveStatus(it.status, klass)) }
+                        }
                     }
                 }
             }
@@ -300,6 +305,7 @@ class FirDeclarationsResolveTransformer(transformer: FirBodyResolveTransformer) 
             if (containingDeclaration != null && containingDeclaration !is FirClass<*>) {
                 // For class members everything should be already prepared
                 prepareSignatureForBodyResolve(simpleFunction)
+                simpleFunction.transformStatus(this, simpleFunction.resolveStatus(simpleFunction.status))
             }
             val returnTypeRef = simpleFunction.returnTypeRef
             if ((returnTypeRef !is FirImplicitTypeRef) && implicitTypeOnly) {

@@ -106,5 +106,10 @@ class FirJavaConstructor(
         return this
     }
 
+    override fun <D> transformStatus(transformer: FirTransformer<D>, data: D): FirJavaConstructor {
+        status = status.transformSingle(transformer, data)
+        return this
+    }
+
     override var containerSource: DeserializedContainerSource? = null
 }

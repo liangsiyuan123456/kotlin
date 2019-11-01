@@ -101,7 +101,7 @@ object NodeConfigurator : AbstractFieldConfigurator() {
 
         memberDeclaration.configure {
             +typeParameters
-            +status
+            +status.withTransform()
         }
 
         expression.configure {
@@ -293,7 +293,7 @@ object NodeConfigurator : AbstractFieldConfigurator() {
             +symbol("FirPropertyAccessorSymbol")
             +booleanField("isGetter")
             +booleanField("isSetter")
-            +status
+            +status.withTransform()
             +annotations
         }
 

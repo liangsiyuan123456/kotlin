@@ -71,7 +71,7 @@ open class FirSimpleFunctionImpl(
         typeParameters.transformInplace(transformer, data)
         transformValueParameters(transformer, data)
         body = body?.transformSingle(transformer, data)
-        status = status.transformSingle(transformer, data)
+        transformStatus(transformer, data)
         annotations.transformInplace(transformer, data)
         transformContractDescription(transformer, data)
         return this
@@ -94,6 +94,11 @@ open class FirSimpleFunctionImpl(
 
     override fun <D> transformValueParameters(transformer: FirTransformer<D>, data: D): FirSimpleFunctionImpl {
         valueParameters.transformInplace(transformer, data)
+        return this
+    }
+
+    override fun <D> transformStatus(transformer: FirTransformer<D>, data: D): FirSimpleFunctionImpl {
+        status = status.transformSingle(transformer, data)
         return this
     }
 

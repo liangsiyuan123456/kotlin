@@ -71,7 +71,7 @@ open class FirPropertyAccessorImpl(
         transformValueParameters(transformer, data)
         body = body?.transformSingle(transformer, data)
         transformContractDescription(transformer, data)
-        status = status.transformSingle(transformer, data)
+        transformStatus(transformer, data)
         annotations.transformInplace(transformer, data)
         return this
     }
@@ -98,6 +98,11 @@ open class FirPropertyAccessorImpl(
 
     override fun <D> transformContractDescription(transformer: FirTransformer<D>, data: D): FirPropertyAccessorImpl {
         contractDescription = contractDescription.transformSingle(transformer, data)
+        return this
+    }
+
+    override fun <D> transformStatus(transformer: FirTransformer<D>, data: D): FirPropertyAccessorImpl {
+        status = status.transformSingle(transformer, data)
         return this
     }
 
