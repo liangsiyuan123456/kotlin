@@ -381,6 +381,11 @@ public class FirResolveTestCaseGenerated extends AbstractFirResolveTestCase {
             runTest("compiler/fir/resolve/testData/resolve/expresssions/outerObject.kt");
         }
 
+        @TestMetadata("privateObjectLiteral.kt")
+        public void testPrivateObjectLiteral() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/expresssions/privateObjectLiteral.kt");
+        }
+
         @TestMetadata("qualifiedExpressions.kt")
         public void testQualifiedExpressions() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/expresssions/qualifiedExpressions.kt");
