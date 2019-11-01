@@ -346,6 +346,11 @@ public class FirResolveTestCaseGenerated extends AbstractFirResolveTestCase {
             runTest("compiler/fir/resolve/testData/resolve/expresssions/localImplicitBodies.kt");
         }
 
+        @TestMetadata("localInnerClass.kt")
+        public void testLocalInnerClass() throws Exception {
+            runTest("compiler/fir/resolve/testData/resolve/expresssions/localInnerClass.kt");
+        }
+
         @TestMetadata("localScopes.kt")
         public void testLocalScopes() throws Exception {
             runTest("compiler/fir/resolve/testData/resolve/expresssions/localScopes.kt");

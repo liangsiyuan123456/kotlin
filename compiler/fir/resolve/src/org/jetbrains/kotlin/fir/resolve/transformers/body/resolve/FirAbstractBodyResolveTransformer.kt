@@ -111,18 +111,18 @@ abstract class FirAbstractBodyResolveTransformer(phase: FirResolvePhase) : FirAb
         val dataFlowAnalyzer: FirDataFlowAnalyzer = FirDataFlowAnalyzer(this)
         override val syntheticCallGenerator: FirSyntheticCallGenerator = FirSyntheticCallGenerator(this, callCompleter)
 
-        internal var _container: FirDeclaration? = null
+        internal var containerIfAny: FirDeclaration? = null
         override var container: FirDeclaration
-            get() = _container!!
+            get() = containerIfAny!!
             private set(value) {
-                _container = value
+                containerIfAny = value
             }
 
         internal inline fun <T> withContainer(declaration: FirDeclaration, crossinline f: () -> T): T {
-            val prevContainer = _container
-            _container = declaration
+            val prevContainer = containerIfAny
+            containerIfAny = declaration
             val result = f()
-            _container = prevContainer
+            containerIfAny = prevContainer
             return result
         }
     }
