@@ -97,25 +97,6 @@ object MissingDependencyClassChecker : CallChecker {
             val containerSource = (targetDescriptor as? DeserializedMemberDescriptor)?.containerSource
             incompatibilityDiagnosticFor(containerSource, element)?.let(context.trace::report)
 
-            val classifierType = when (targetDescriptor) {
-                is TypeAliasDescriptor -> targetDescriptor.expandedType
-                else -> targetDescriptor.defaultType
-            }
-
-            for (supertype in classifierType.supertypes()) {
-                val supertypeDeclarationDescriptor = supertype.constructor.declarationDescriptor
-                if (supertypeDeclarationDescriptor !is ClassDescriptor) continue
-                if (supertypeDeclarationDescriptor.visibility == Visibilities.LOCAL) continue
-
-                val superTypeClassId = supertypeDeclarationDescriptor.classId ?: continue // or error
-                val dependency = context.moduleDescriptor.findClassAcrossModuleDependencies(superTypeClassId)
-
-                if (dependency == null || dependency is NotFoundClasses.MockClassDescriptor) {
-                    context.trace.report(
-                        MISSING_DEPENDENCY_SUPERCLASS.on(element, supertypeDeclarationDescriptor.fqNameSafe, targetDescriptor.fqNameSafe)
-                    )
-                }
-            }
         }
     }
 }

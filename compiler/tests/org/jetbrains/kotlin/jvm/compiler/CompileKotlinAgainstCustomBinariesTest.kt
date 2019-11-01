@@ -211,8 +211,12 @@ class CompileKotlinAgainstCustomBinariesTest : AbstractKotlinCompilerIntegration
         doTestBrokenLibrary("library", "test/C\$D.class")
     }
 
-    fun testIncompleteHierarchyNoReportIfNotUsed() {
-        doTestBrokenLibrary("library", "test/Unused.class")
+    fun testIncompleteHierarchyNoErrors() {
+        doTestBrokenLibrary("library", "test/Super.class")
+    }
+
+    fun testIncompleteHierarchyErrorPositions() {
+        doTestBrokenLibrary("library", "test/Super.class")
     }
 
     fun testIncompleteHierarchyOnlyConstructorCalls() {

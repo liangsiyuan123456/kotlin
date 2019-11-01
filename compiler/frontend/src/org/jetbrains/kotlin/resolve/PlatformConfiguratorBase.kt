@@ -32,7 +32,8 @@ private val DEFAULT_DECLARATION_CHECKERS = listOf(
     ReservedMembersAndConstructsForInlineClass(),
     ResultClassInReturnTypeChecker(),
     LocalVariableTypeParametersChecker(),
-    TailrecFunctionChecker
+    TailrecFunctionChecker,
+    MissingDependencySupertypeChecker.ForDeclarations
 )
 
 private val DEFAULT_CALL_CHECKERS = listOf(
@@ -44,7 +45,8 @@ private val DEFAULT_CALL_CHECKERS = listOf(
     UnderscoreUsageChecker, AssigningNamedArgumentToVarargChecker(), ImplicitNothingAsTypeParameterCallChecker,
     PrimitiveNumericComparisonCallChecker, LambdaWithSuspendModifierCallChecker,
     UselessElvisCallChecker(), ResultTypeWithNullableOperatorsChecker(), NullableVarargArgumentCallChecker,
-    NamedFunAsExpressionChecker, ContractNotAllowedCallChecker, ReifiedTypeParameterSubstitutionChecker(), TypeOfChecker
+    NamedFunAsExpressionChecker, ContractNotAllowedCallChecker, ReifiedTypeParameterSubstitutionChecker(), TypeOfChecker,
+    MissingDependencySupertypeChecker.ForCalls
 )
 private val DEFAULT_TYPE_CHECKERS = emptyList<AdditionalTypeChecker>()
 private val DEFAULT_CLASSIFIER_USAGE_CHECKERS = listOf(

@@ -26,9 +26,17 @@ import org.jetbrains.kotlin.util.slicedMap.Slices
 import org.jetbrains.kotlin.util.slicedMap.WritableSlice
 
 class TraceBasedErrorReporter(private val trace: BindingTrace) : ErrorReporter {
+    companion object {
+        @JvmField
+        val INCOMPLETE_HIERARCHY: WritableSlice<ClassDescriptor, List<String>> = Slices.createCollectiveSlice()
+
+        init {
+            BasicWritableSlice.initSliceDebugNames(TraceBasedErrorReporter::class.java)
+        }
+    }
 
     override fun reportIncompleteHierarchy(descriptor: ClassDescriptor, unresolvedSuperClasses: List<String>) {
-        // reported by classifier usage checker
+        trace.record(INCOMPLETE_HIERARCHY, descriptor, unresolvedSuperClasses)
     }
 
     override fun reportCannotInferVisibility(descriptor: CallableMemberDescriptor) {
